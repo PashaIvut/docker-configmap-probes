@@ -51,14 +51,87 @@ Cоздадим **namespace** и сделаем его текущим.
 Под работает.  
 <img width="782" height="106" alt="image" src="https://github.com/user-attachments/assets/4cc1872f-e50f-499c-b18f-e5e9629a6efa" />  
 
-Добавим задержку старта и применим снова.
-<img width="620" height="847" alt="image" src="https://github.com/user-attachments/assets/fcd1f29d-c572-4aff-986e-5d5f70753bb0" />  
+Добавим задержку старта и применим снова.  
+<img width="630" height="847" alt="image" src="https://github.com/user-attachments/assets/3e96e660-e73f-4851-afc2-c1da85002169" />  
 
 Наблюдаем проблемы.  
 <img width="895" height="318" alt="image" src="https://github.com/user-attachments/assets/ccaea272-346d-4d13-85fb-f52cba76cff9" />
-Когда Deployment web-slow применяется с postStart: sleep 60, контейнер nginx запускается, но не отвечает на HTTP-запросы в течение 60 секунд, потому что команда sleep блокирует запуск основного процесса nginx.  
+Когда Deployment web-slow применяется с задержкой, контейнер nginx запускается, но не отвечает на HTTP-запросы в течение 60 секунд.  
 Это приводит к проблемам с пробами. LivenessProbe проверяет, жив ли контейнер, и если проверка не проходит, перезапускает контейнер. В данном случае livenessProbe начинает проверять порт 80 через 0 секунд после запуска, но nginx не отвечает, поэтому проверка падает. После трёх неудачных проверок подряд убивает контейнер и перезапускает его, увеличивая счётчик RESTARTS.  
-ReadinessProbe проверяет, готов ли под принимать трафик. Если readinessProbe не проходит, под получает статус NotReady, и Service не направляет на него запросы. В отличие от livenessProbe, readinessProbe не перезапускает контейнер, но под остаётся недоступным для трафика. В данном случае readinessProbe тоже не проходит, потому что nginx не отвечает, поэтому под всё время остаётся в статусе 0/1 Ready.
+ReadinessProbe проверяет, готов ли под принимать трафик. Если readinessProbe не проходит, под получает статус NotReady, и Service не направляет на него запросы. ReadinessProbe не перезапускает контейнер, но под остаётся недоступным для трафика. В данном случае readinessProbe тоже не проходит, потому что nginx не отвечает, поэтому под всё время остаётся в статусе 0/1 Ready.
+
+Добавим StartupProbe и применим. 
+<img width="884" height="952" alt="image" src="https://github.com/user-attachments/assets/9c3f0916-ce5c-45fc-8652-9912fa7c2cb4" />  
+
+Новый под появился без проблем, странностей не наблюдаем.  
+<img width="777" height="109" alt="image" src="https://github.com/user-attachments/assets/51f135f2-ff50-4b02-bc1c-fc42c6d8a96d" />  
+Новый под (web-slow-5fdf9655dc-6bx4f) с startupProbe запускается успешно. Он не перезапускается, потому что startupProbe даёт ему достаточно времени на старт, и он спокойно переживает задержку в 60 секунд.  
+
+Финальное состояние пода.  
+<img width="1477" height="747" alt="image" src="https://github.com/user-attachments/assets/04ca24fd-5ca2-41c4-9fac-d2ccbed57ff9" />  
+
+## Часть 3. Ошибка liveness probe и перезапуски контейнера
+Создадим файл с ошибочной livenessProbe.  
+<img width="585" height="711" alt="image" src="https://github.com/user-attachments/assets/dcbc1757-cd31-4c36-b52e-bf36007c41a9" />  
+<img width="921" height="51" alt="image" src="https://github.com/user-attachments/assets/926b69cc-e7d5-4b5f-99b4-37dfc7df33c2" />  
+
+Наблюдаем перезапуски.  
+<img width="817" height="126" alt="image" src="https://github.com/user-attachments/assets/240f33ce-3f59-4716-9ebf-5360b11d3e9c" />  
+
+В логах беда.  
+<img width="1475" height="702" alt="image" src="https://github.com/user-attachments/assets/aa74c9fc-e592-458b-987f-94d36c5f2f4a" />  
+
+Вернем правильный путь.  
+<img width="666" height="691" alt="image" src="https://github.com/user-attachments/assets/e673ed06-0963-48e2-871c-af1d348c7a4c" />  
+
+Все восстановилось, все работает.  
+<img width="908" height="166" alt="image" src="https://github.com/user-attachments/assets/3a95e59a-ee0c-449a-9ae6-98af8c562326" />  
+
+## Часть 4. Слишком маленький memory limit и OOMKilled
+Создадим Deployment с маленьким memory limit.
+<img width="811" height="677" alt="image" src="https://github.com/user-attachments/assets/27ece1cc-2873-4ace-a88d-96de6cdb7453" />  
+polinux/stress - это Docker-образ с программой stress — инструментом для создания искусственной нагрузки на систему.  
+--vm 1 — запускает 1 процесс, потребляющий память; --vm-bytes 150M — выделяет 150 MB памяти; --vm-hang 1 — зависает на 1 секунду, чтобы процесс не завершался сразу.  
+
+Наблюдаем перегрузки.  
+<img width="912" height="285" alt="image" src="https://github.com/user-attachments/assets/e44114b6-511c-49be-9833-cb4db8747eaf" />  
+<img width="678" height="220" alt="image" src="https://github.com/user-attachments/assets/bd4d3a9e-3781-40c9-8ff6-d5cd68d2ba20" />  
+
+Увеличим лимит.  
+<img width="780" height="670" alt="image" src="https://github.com/user-attachments/assets/e4a9ac71-70e1-4af7-9b9e-bdf3b7ff6e62" />  
+
+Запуск прошел без проблем.  
+<img width="830" height="168" alt="image" src="https://github.com/user-attachments/assets/cbfc01cd-6721-457d-854b-ec212bf001f6" />  
+
+## Часть 5. Слишком низкий CPU limit и деградация работы
+Создадим Deployment с низким CPU limit.  
+<img width="641" height="699" alt="image" src="https://github.com/user-attachments/assets/f81819c5-4961-4636-bf74-a3af6ad65bdc" />
+
+При CPU limit 50m и отсутствии нагрузки время ответа составляет 3-7 мс.
+
+Создадим отдельный сервис, узнаем порт.
+
+При CPU limit 50m и отсутствии дополнительной нагрузки nginx успешно обрабатывает запросы за 3-7 миллисекунд. Это нормальная работа контейнера.
+<img width="1238" height="681" alt="image" src="https://github.com/user-attachments/assets/dfd5e22c-38cd-4da8-b9b8-0d34961a11f3" />
+
+Теперь пустим нагрузку в нескольких терминалах.
+<img width="1220" height="140" alt="image" src="https://github.com/user-attachments/assets/4c83e9fe-36a2-40fb-9088-d789f94bbccb" />
+Время обработки увеличилось.
+
+Уберем ограничения по CPU.  
+<img width="580" height="577" alt="image" src="https://github.com/user-attachments/assets/ccd556d4-d3fc-4e48-ae88-47055a26d0b3" />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
