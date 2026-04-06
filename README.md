@@ -3,9 +3,9 @@
 ## Часть 1. Обновление ConfigMap и применение новой конфигурации
 ### Задание 1. 
 Cоздадим **namespace** и сделаем его текущим.  
-<img width="967" height="131" alt="image" src="https://github.com/user-attachments/assets/f79a46cd-9188-49f4-bb63-da6e104262d7" />
+<img width="967" height="131" alt="image" src="https://github.com/user-attachments/assets/f79a46cd-9188-49f4-bb63-da6e104262d7" />  
 
-"Создадим" ConfigMap со старым содержимым.
+"Создадим" ConfigMap со старым содержимым.  
 <img width="500" height="219" alt="image" src="https://github.com/user-attachments/assets/9228e4e5-77e1-415a-934d-de4af74b1fa7" />  
 
 И применим.  
