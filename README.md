@@ -44,6 +44,13 @@ Cоздадим **namespace** и сделаем его текущим.
 ## Часть 2. Startup probe и медленный старт приложения
 Создадим Deployment без startupProbe.  
 <img width="556" height="818" alt="image" src="https://github.com/user-attachments/assets/434518fa-cf20-4164-ae76-874d0afef101" />  
+ReadinessProbe с параметрами: 
+-- path: / (проверяет корневой путь веб-сервера), 
+-- port: 80 (проверяет порт 80), 
+-- initialDelaySeconds: 0 (начинает проверку сразу после запуска контейнера), 
+--periodSeconds: 5 (проверяет каждые 5 секунд) — проверяет, готов ли под принимать трафик, и при провале исключает его из балансировки Service. 
+
+LivenessProbe аналогично.
 
 Применим.  
 <img width="898" height="41" alt="image" src="https://github.com/user-attachments/assets/cac237cb-8b83-40a6-a8be-0c11430f9c1c" />  
